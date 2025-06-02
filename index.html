@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Check-in DB7</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; background: #f4f6f8; padding: 20px; color: #333; }
+    .checkin-box {
+      background: #fff; padding: 30px; border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08); max-width: 480px; margin: 40px auto;
+    }
+    h2 { color: #00b894; margin-bottom: 20px; }
+    input {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc;
+      margin-bottom: 20px; font-size: 16px;
+    }
+    button {
+      background: #00b894; color: white; padding: 12px; border: none;
+      border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%;
+    }
+    .status {
+      margin-top: 20px; padding: 15px; border-radius: 10px; font-weight: bold;
+    }
+    .ativo {
+      background-color: #d0f0dc; color: #1b6e3c; border-left: 6px solid #00b894;
+    }
+    .inativo {
+      background-color: #ffe2e2; color: #9f2b2b; border-left: 6px solid #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkin-box">
+    <h2>Check-in DB7 Saúde</h2>
+    <p>Digite seu CPF para verificar se sua assinatura está ativa e liberar seu benefício.</p>
+    <input type="text" id="cpf" placeholder="Digite seu CPF" maxlength="14" />
+    <button id="verificar">Verificar Assinatura</button>
+    <div id="resultado" class="status" style="display:none;"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function limparCPF(cpf) {
+        return cpf.replace(/\D/g, "");
+      }
+
+      const btn = document.getElementById("verificar");
+      btn.addEventListener("click", async function () {
+        const cpfDigitado = limparCPF(document.getElementById("cpf").value.trim());
+        const resultado = document.getElementById("resultado");
+
+        if (!cpfDigitado) {
+          resultado.textContent = "Por favor, digite seu CPF.";
+          resultado.className = "status inativo";
+          resultado.style.display = "block";
+          return;
+        }
+
+        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEjBk_ebiO2vKCupo2_kgckI535AhSj2Cvz0vXPzL93ULorrrESfUO8_05CCjdVWnNvOitsuJa2XG1/pub?gid=0&single=true&output=csv";
+
+        try {
+          const response = await fetch(sheetURL);
+          const data = await response.text();
+          const rows = data.split("\n").map(row => row.split(","));
+
+          let encontrado = false;
+
+          for (let i = 1; i < rows.length; i++) {
+            const rowCpf = limparCPF(rows[i][0]?.trim());
+            const nome = rows[i][1]?.trim();
+            const status = rows[i][2]?.trim().toLowerCase();
+
+            if (rowCpf === cpfDigitado) {
+              encontrado = true;
+              if (status === "ativo") {
+                resultado.innerHTML = `Olá, <strong>${nome}</strong>!<br>✅ Sua assinatura está ativa. Benefício liberado.`;
+                resultado.className = "status ativo";
+              } else {
+                resultado.innerHTML = `Olá, <strong>${nome}</strong>.<br>⚠️ Sua assinatura está <strong>inativa</strong> ou pendente. Regularize para acessar o benefício.`;
+                resultado.className = "status inativo";
+              }
+              break;
+            }
+          }
+
+          if (!encontrado) {
+            resultado.innerHTML = `CPF não encontrado. Verifique os dados ou entre em contato com o suporte.`;
+            resultado.className = "status inativo";
+          }
+
+          resultado.style.display = "block";
+        } catch (error) {
+          resultado.textContent = "Erro ao verificar assinatura. Tente novamente mais tarde.";
+          resultado.className = "status inativo";
+          resultado.style.display = "block";
+          console.error("Erro ao acessar planilha:", error);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
